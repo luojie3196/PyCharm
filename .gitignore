@@ -1,0 +1,9 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+*.mp4
+yes
+yes.pub
+*.exe
+*.mp4*
