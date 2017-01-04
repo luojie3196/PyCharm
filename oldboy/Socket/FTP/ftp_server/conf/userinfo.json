@@ -1,0 +1,16 @@
+{
+  "UserInfo":[
+  {
+    "Name":"test",
+    "PWD": "202cb962ac59075b964b07152d234b70",
+    "HomeDir": "C:\\Users\\93560\\PycharmProjects\\PyCharm\\oldboy\\Socket\\FTP\\ftp_server\\home\\test",
+    "overridden":"True"
+  },
+  {
+    "Name":"test1",
+    "PWD": "202cb962ac59075b964b07152d234b70",
+    "HomeDir": "C:\\Users\\93560\\PycharmProjects\\PyCharm\\oldboy\\Socket\\FTP\\ftp_server\\home\\test1",
+    "overridden":"True"
+  }
+ ]
+}

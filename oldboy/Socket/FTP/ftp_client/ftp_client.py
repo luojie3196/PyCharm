@@ -13,6 +13,8 @@ class FtpClient(object):
 
     def __init__(self):
         self.client = socket.socket()
+        self.current_path = ''
+        self.current_path = ''
         pass
 
     def help(self):
@@ -29,9 +31,19 @@ class FtpClient(object):
         self.client.connect((ip, port))
         pass
 
+    def authentication(self):
+        # TODO: 需要从json文件中获取该路径
+        self.current_path = "C:\\Users\\93560\\PycharmProjects\\PyCharm\\oldboy\\Socket\\FTP\\ftp_server\\home\\test"
+        self.current_path = "C:\\Users\\93560\\PycharmProjects\\PyCharm\\oldboy\\Socket\\FTP\\ftp_server\\home\\test"
+        return True
+        pass
+
     def interactive(self):
+        if not self.authentication():
+            pass
         while True:
-            # self.authenticate()
+            # if not self.authentication():
+            #     pass
             cmd = input(">>").strip()
             if len(cmd) == 0:
                 continue
@@ -52,12 +64,37 @@ class FtpClient(object):
                 sys.stdout.flush()
                 size = percentage
 
+    def cmd_cd(self, *args):
+        cmd_split = args[0].split()
+        if len(cmd_split) == 1:
+            path = self.home_path
+        else:
+            path = cmd_split[1]
+
+        msg_dic = {
+            "action": "cd",
+            "path": path,
+            "current_path": self.current_path,
+            "home_path": self.home_path
+        }
+        # 发送命令到服务器
+        self.client.send(json.dumps(msg_dic).encode("utf-8"))
+        print("cmd_cd-send ", msg_dic)
+        server_response = self.client.recv(1024)
+        msg_dic = json.loads(server_response.decode())
+        self.current_path = msg_dic["current_path"]
+        status = msg_dic["status"]
+        if status == "OK":
+            print("current path:", self.current_path)
+        else:
+            print("No such file or directory")
+
     def cmd_ls(self, *args):
         cmd_split = args[0].split()
         if len(cmd_split) == 1:
-            path = "."
+            path = self.current_path
         else:
-            path = cmd_split[1]
+            path = os.path.join(self.current_path, cmd_split[1])
 
         msg_dic = {
             "action": "ls",
@@ -82,6 +119,7 @@ class FtpClient(object):
             recv_size += len(data)
             recv_data += data
         else:
+            # TODO:ls目录为空时如何处理
             if recv_data:
                 print(recv_data.decode())
             else:

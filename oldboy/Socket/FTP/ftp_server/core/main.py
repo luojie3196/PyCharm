@@ -6,6 +6,7 @@ import json
 import os
 import subprocess
 import hashlib
+import re
 
 
 class MyTCPHandler(socketserver.BaseRequestHandler):
@@ -15,6 +16,40 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
         ret_str = ret.stdout.read()
         left_space = ret_str.decode().split()[3]
         return int(left_space) * 1024
+
+    def cd(self, *args):
+        cmd_dic = args[0]
+        path = cmd_dic["path"]
+        current_path = cmd_dic["current_path"]
+        home_path = cmd_dic["home_path"]
+        tmp_path = current_path
+        reg = re.findall(r'\s*\.\.\s*', path)
+        n = 0
+        while n < len(reg):
+            if len(current_path) <= len(home_path):
+                current_path = home_path
+                break
+            else:
+                current_path = os.path.dirname(current_path)
+            n += 1
+        path = re.sub(r'\s*\.\.\s*', "", path)
+        print("path:", path)
+        # 增加replace方法解决windows下不能join问题
+        current_path = current_path.replace("\\", "/")
+        print("current path:", current_path)
+        # current_path = os.path.join(current_path, path)
+        current_path = current_path + "/" + path
+        if os.path.isdir(current_path):
+            status = "OK"
+        else:
+            status = "NOK"
+            current_path = tmp_path
+        print("current path:", current_path)
+        msg_dic = {
+            "status": status,
+            "current_path": current_path
+        }
+        self.request.send(json.dumps(msg_dic).encode("utf-8"))
 
     def ls(self, *args):
         cmd_dic = args[0]
