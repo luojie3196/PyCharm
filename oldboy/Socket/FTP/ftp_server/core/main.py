@@ -16,6 +16,16 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
         left_space = ret_str.decode().split()[3]
         return int(left_space) * 1024
 
+    def ls(self, *args):
+        cmd_dic = args[0]
+        path = cmd_dic["path"]
+        cmd_res = os.popen("ls %s" % path).read()
+        cmd_size = str(len(cmd_res.encode("utf-8")))
+        self.request.send(cmd_size.encode("utf-8"))
+        # 防止粘包
+        self.request.recv(1024)
+        self.request.send(cmd_res.encode("utf-8"))
+
     def get(self, *args):
         cmd_dic = args[0]
         filename = cmd_dic["filename"]

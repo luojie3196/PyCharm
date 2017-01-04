@@ -52,6 +52,41 @@ class FtpClient(object):
                 sys.stdout.flush()
                 size = percentage
 
+    def cmd_ls(self, *args):
+        cmd_split = args[0].split()
+        if len(cmd_split) == 1:
+            path = "."
+        else:
+            path = cmd_split[1]
+
+        msg_dic = {
+            "action": "ls",
+            "path": path
+        }
+        # 发送命令到服务器
+        self.client.send(json.dumps(msg_dic).encode("utf-8"))
+        print("cmd_ls-send ", msg_dic)
+        # 接收命令的长度
+        server_response = self.client.recv(1024)
+        str_size = int(server_response.decode())
+        # 防止粘包
+        self.client.send(b"Ready receive")
+        recv_size = 0
+        recv_data = b""
+        while recv_size < str_size:
+            if str_size - recv_size < 1024:
+                size = 1024
+            else:
+                size = str_size - recv_size
+            data = self.client.recv(size)
+            recv_size += len(data)
+            recv_data += data
+        else:
+            if recv_data:
+                print(recv_data.decode())
+            else:
+                print("Invalid command...")
+
     def cmd_put(self, *args):
         cmd_split = args[0].split()
         if len(cmd_split) > 1:
