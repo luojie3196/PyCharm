@@ -43,3 +43,8 @@ fw.close()
 # 打印排序后前20个字符的数量
 # for x in range(0, 20):
 #     print(stat[x][0], stat[x][1])
+
+with open("result.json", "r") as f:
+    data_dict = json.loads(f.read())
+
+print(len(data_dict))
