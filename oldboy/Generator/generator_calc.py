@@ -4,11 +4,13 @@
 
 import time
 
+
 def consumer(name):
     print(name, ' Eat baozi')
     while True:
         baozi = yield
         print(name, ' eat ', baozi )
+
 
 def productor(name):
     c1 = consumer('A')

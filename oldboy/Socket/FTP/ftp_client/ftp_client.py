@@ -3,8 +3,10 @@
 
 import socket
 import os
+import sys
 import hashlib
 import json
+import time
 
 
 class FtpClient(object):
@@ -40,6 +42,16 @@ class FtpClient(object):
             else:
                 self.help()
 
+    def generator(self, file_size):
+        size = 0
+        while True:
+            recv_size = yield
+            percentage = int(recv_size / file_size * 100)
+            if percentage != size:
+                sys.stdout.write('\r' + '-' * percentage + '> ' + str(percentage) + '%')
+                sys.stdout.flush()
+                size = percentage
+
     def cmd_put(self, *args):
         cmd_split = args[0].split()
         if len(cmd_split) > 1:
@@ -61,12 +73,18 @@ class FtpClient(object):
                 status_dic = json.loads(server_response.decode())
                 space_status = status_dic["space_status"]
                 if space_status:
+                    recv_size = 0
+                    generator = self.generator(filesize)
+                    generator.__next__()
                     m = hashlib.md5()
                     f = open(filename, "rb")
                     for line in f:
                         m.update(line)
                         self.client.send(line)
+                        recv_size += len(line)
+                        generator.send(recv_size)
                     else:
+                        print("\nUpload size: ", recv_size)
                         f.close()
                         md5_str = self.client.recv(1024)
                         recv_md5 = md5_str.decode()
@@ -101,6 +119,8 @@ class FtpClient(object):
             if file_status:
                 file_size = msg_dic["file_size"]
                 recv_size = 0
+                generator = self.generator(file_size)
+                generator.__next__()
                 m = hashlib.md5()
                 f = open(filename, "wb")
                 while recv_size < file_size:
@@ -108,18 +128,20 @@ class FtpClient(object):
                         size = 1024
                     else:
                         size = file_size - recv_size
-                        print("Last recv size: ", size)
+                        # print("Last recv size: ", size)
                     data = self.client.recv(size)
                     f.write(data)
                     m.update(data)
                     recv_size += len(data)
+                    generator.send(recv_size)
                 else:
                     f.close()
                     file_md5 = m.hexdigest()
                     self.client.send(file_md5.encode("utf-8"))
                     md5_check_status = self.client.recv(1024).decode()
-                    print("md5_check_status: ", md5_check_status)
+                    # print("md5_check_status: ", md5_check_status)
                     if md5_check_status == "OK":
+                        print("\nDownload size: ", recv_size)
                         print("%s file get success..." % filename)
                         # print("md5: %s" % m.hexdigest())
                     else:
