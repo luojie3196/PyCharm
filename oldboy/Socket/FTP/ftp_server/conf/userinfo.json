@@ -4,12 +4,14 @@
     "Name":"test",
     "PWD": "202cb962ac59075b964b07152d234b70",
     "HomeDir": "C:\\Users\\93560\\PycharmProjects\\PyCharm\\oldboy\\Socket\\FTP\\ftp_server\\home\\test",
+    "Space": "500M",
     "overridden":"True"
   },
   {
     "Name":"test1",
     "PWD": "202cb962ac59075b964b07152d234b70",
     "HomeDir": "C:\\Users\\93560\\PycharmProjects\\PyCharm\\oldboy\\Socket\\FTP\\ftp_server\\home\\test1",
+    "Space": "200M",
     "overridden":"True"
   }
  ]

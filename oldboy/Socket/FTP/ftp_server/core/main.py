@@ -17,6 +17,27 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
         left_space = ret_str.decode().split()[3]
         return int(left_space) * 1024
 
+    def authentication(self, *args):
+        userinfo_dic = args[0]
+        username = userinfo_dic["username"]
+        password = userinfo_dic["password"]
+        with open("../conf/userinfo.json", "r") as fr:
+            userinfo = json.loads(fr.read())["UserInfo"]
+        msg_dic = {
+            "status": "NOK"
+        }
+        for user in userinfo:
+            if user["Name"] == username and user["PWD"] == password:
+                msg_dic = {
+                    "status": "OK",
+                    "home_path": user["HomeDir"],
+                    "space": user["Space"],
+                    "overridden": user["overridden"]
+                }
+                break
+        print("msg_dic: ", msg_dic)
+        self.request.send(json.dumps(msg_dic).encode("utf-8"))
+
     def cd(self, *args):
         cmd_dic = args[0]
         path = cmd_dic["path"]
@@ -34,11 +55,13 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
             n += 1
         path = re.sub(r'\s*\.\.\s*', "", path)
         print("path:", path)
-        # 增加replace方法解决windows下不能join问题
         current_path = current_path.replace("\\", "/")
         print("current path:", current_path)
-        # current_path = os.path.join(current_path, path)
-        current_path = current_path + "/" + path
+        print("home path:", home_path)
+        if path != home_path:
+            current_path = current_path + "/" + path
+        else:
+            current_path = home_path
         if os.path.isdir(current_path):
             status = "OK"
         else:

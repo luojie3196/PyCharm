@@ -13,8 +13,9 @@ class FtpClient(object):
 
     def __init__(self):
         self.client = socket.socket()
+        self.home_path = ''
         self.current_path = ''
-        self.current_path = ''
+        self.overridden = False
         pass
 
     def help(self):
@@ -32,18 +33,38 @@ class FtpClient(object):
         pass
 
     def authentication(self):
-        # TODO: 需要从json文件中获取该路径
-        self.current_path = "C:\\Users\\93560\\PycharmProjects\\PyCharm\\oldboy\\Socket\\FTP\\ftp_server\\home\\test"
-        self.current_path = "C:\\Users\\93560\\PycharmProjects\\PyCharm\\oldboy\\Socket\\FTP\\ftp_server\\home\\test"
+        # 为了调试方便，暂时把登录认证关闭
+        # username = input("User name: ").strip()
+        # password = input("Password: ").strip()
+        username = "test"
+        password = "123"
+        m = hashlib.md5()
+        m.update(password.encode("utf-8"))
+        password = m.hexdigest()
+        msg_dic = {
+            "action": "authentication",
+            "username": username,
+            "password": password
+        }
+        # 发送命令到服务器
+        self.client.send(json.dumps(msg_dic).encode("utf-8"))
+        print("cmd_auth-send ", msg_dic)
+        server_res = self.client.recv(1024)
+        user_dic = json.loads(server_res.decode())
+        print("user dic:", user_dic)
+        if user_dic["status"] == "NOK":
+            return False
+        self.home_path = user_dic["home_path"]
+        self.current_path = self.home_path
+        self.overridden = user_dic["overridden"]
         return True
-        pass
 
     def interactive(self):
         if not self.authentication():
-            pass
+            print("Account authentication failed")
+            return False
+        print("Account authentication success")
         while True:
-            # if not self.authentication():
-            #     pass
             cmd = input(">>").strip()
             if len(cmd) == 0:
                 continue
