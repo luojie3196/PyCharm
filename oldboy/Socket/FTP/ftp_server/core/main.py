@@ -11,11 +11,11 @@ import re
 
 class MyTCPHandler(socketserver.BaseRequestHandler):
 
-    def get_space(self, path):
-        ret = subprocess.Popen("df %s | tail -1" % path, stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
+    def get_used_space(self, path):
+        ret = subprocess.Popen("du -sh %s" % path, stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
         ret_str = ret.stdout.read()
-        left_space = ret_str.decode().split()[3]
-        return int(left_space) * 1024
+        used_space = ret_str.decode().split()[0]
+        return used_space
 
     def authentication(self, *args):
         userinfo_dic = args[0]
@@ -87,9 +87,11 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
     def get(self, *args):
         cmd_dic = args[0]
         filename = cmd_dic["filename"]
-        if os.path.isfile(filename):
+        current_path = cmd_dic["current_path"]
+        file_full_path = current_path + "/" + filename
+        if os.path.isfile(file_full_path):
             file_status = True
-            file_size = os.stat(filename).st_size
+            file_size = os.stat(file_full_path).st_size
         else:
             file_status = False
             file_size = None
@@ -101,7 +103,7 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
         self.request.recv(1024)
         if file_status:
             m = hashlib.md5()
-            f = open(filename, "rb")
+            f = open(file_full_path, "rb")
             for line in f:
                 self.request.send(line)
                 m.update(line)
@@ -111,28 +113,38 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
                 recv_md5 = md5_str.decode()
                 file_md5 = m.hexdigest()
                 if file_md5 == recv_md5:
-                    print("%s file get success..." % filename)
+                    print("%s file get success..." % file_full_path)
                     # print("md5: %s" % m.hexdigest())
                     self.request.send(b"OK")
                 else:
                     print("MD5 check failed...")
-                    print("%s file get failed..." % filename)
+                    print("%s file get failed..." % file_full_path)
                     self.request.send(b"NOK")
                 # print("[%s] file send success..." % filename)
             f.close()
         else:
-            print("[%s] file not exist" % filename)
+            print("[%s] file not exist" % file_full_path)
 
     def put(self, *args):
         cmd_dic = args[0]
         filename = cmd_dic["filename"]
         file_size = cmd_dic["size"]
+        current_path = cmd_dic["current_path"]
+        home_path = cmd_dic["home_path"]
         overridden = cmd_dic["overridden"]
-        # TODO: 如何动态传入path值
-        left_space = self.get_space(".")
-        print("left_space: ", left_space)
+        # 获取用户分配的空间
+        user_space = cmd_dic["user_space"]
+        user_space = re.sub(r"\D", "", user_space)
+        user_space = int(user_space)*1024*1024
+        # 获取已使用空间
+        used_space = self.get_used_space(home_path)
+        used_space = re.sub(r"\D", "", used_space)
+        used_space = int(used_space) * 1024 * 1024
+        # 获取可用空间并与需上传的文件比较
+        available_space = user_space - used_space
+        print("available_space: ", available_space)
         print("file size: ", file_size)
-        if left_space < file_size:
+        if available_space < file_size:
             space_status = False
         else:
             space_status = True
@@ -141,11 +153,12 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
             "space_status": space_status
         }
         self.request.send(json.dumps(msg_dic).encode("utf-8"))
+        file_full_path = current_path + "/" + filename
         if space_status:
-            if os.path.isfile(filename) and not overridden:
-                f = open(filename + ".new", "wb")
+            if os.path.isfile(file_full_path) and not overridden:
+                f = open(file_full_path + ".new", "wb")
             else:
-                f = open(filename, "wb")
+                f = open(file_full_path, "wb")
             recv_size = 0
             m = hashlib.md5()
             while recv_size < file_size:
@@ -165,11 +178,11 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
                 md5_check_status = self.request.recv(1024).decode()
                 print("md5_check_status: ", md5_check_status)
                 if md5_check_status == "OK":
-                    print("%s file put success..." % filename)
+                    print("%s file put success..." % file_full_path)
                     # print("md5: %s" % m.hexdigest())
                 else:
-                    print("%s file put failed..." % filename)
-                    os.remove(filename)
+                    print("%s file put failed..." % file_full_path)
+                    os.remove(file_full_path)
 
         else:
             print("No space left on device")

@@ -15,22 +15,19 @@ class FtpClient(object):
         self.client = socket.socket()
         self.home_path = ''
         self.current_path = ''
+        self.user_space = 0
         self.overridden = False
-        pass
 
     def help(self):
-        msg = '''
-        ls
-        pwd
-        cd ../..
-        get filename
-        put filename
+        msg = '''Usage: \n*ls [path] \n*cd [path] \n*get filename \n*put filename
         '''
         print(msg)
 
     def connect(self, ip, port):
         self.client.connect((ip, port))
-        pass
+
+    def close(self):
+        self.client.close()
 
     def authentication(self):
         # 为了调试方便，暂时把登录认证关闭
@@ -56,14 +53,16 @@ class FtpClient(object):
             return False
         self.home_path = user_dic["home_path"]
         self.current_path = self.home_path
-        self.overridden = user_dic["overridden"]
+        self.user_space = user_dic["space"]
+        if user_dic["overridden"] == "True":
+            self.overridden = True
         return True
 
     def interactive(self):
         if not self.authentication():
-            print("Account authentication failed")
+            print("Authentication failed")
             return False
-        print("Account authentication success")
+        print("Authentication success")
         while True:
             cmd = input(">>").strip()
             if len(cmd) == 0:
@@ -158,7 +157,10 @@ class FtpClient(object):
                     "action": "put",
                     "filename": filename,
                     "size": filesize,
-                    "overridden": True
+                    "current_path": self.current_path,
+                    "home_path": self.home_path,
+                    "user_space": self.user_space,
+                    "overridden": self.overridden
                 }
                 self.client.send(json.dumps(msg_dic).encode("utf-8"))
                 print("cmd_put-send ", msg_dic)
@@ -168,6 +170,7 @@ class FtpClient(object):
                 space_status = status_dic["space_status"]
                 if space_status:
                     recv_size = 0
+                    # 创建一个生成器，用于实现put过程的进度条
                     generator = self.generator(filesize)
                     generator.__next__()
                     m = hashlib.md5()
@@ -192,7 +195,7 @@ class FtpClient(object):
                             print("%s file put failed..." % filename)
                             self.client.send(b"NOK")
                 else:
-                    print("Server not enough space")
+                    print("Server no enough space")
             else:
                 print(filename, "is not exist")
 
@@ -203,6 +206,7 @@ class FtpClient(object):
             msg_dic = {
                 "action": "get",
                 "filename": filename,
+                "current_path": self.current_path
             }
             self.client.send(json.dumps(msg_dic).encode("utf-8"))
             print("cmd_get-send ", msg_dic)
@@ -213,6 +217,7 @@ class FtpClient(object):
             if file_status:
                 file_size = msg_dic["file_size"]
                 recv_size = 0
+                # 创建一个生成器，用于实现get过程的进度条
                 generator = self.generator(file_size)
                 generator.__next__()
                 m = hashlib.md5()
@@ -233,11 +238,9 @@ class FtpClient(object):
                     file_md5 = m.hexdigest()
                     self.client.send(file_md5.encode("utf-8"))
                     md5_check_status = self.client.recv(1024).decode()
-                    # print("md5_check_status: ", md5_check_status)
                     if md5_check_status == "OK":
                         print("\nDownload size: ", recv_size)
                         print("%s file get success..." % filename)
-                        # print("md5: %s" % m.hexdigest())
                     else:
                         print("%s file get failed..." % filename)
                         os.remove(filename)
@@ -247,3 +250,4 @@ class FtpClient(object):
 ftp = FtpClient()
 ftp.connect("localhost", 9999)
 ftp.interactive()
+ftp.close()
