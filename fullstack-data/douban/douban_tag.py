@@ -20,13 +20,13 @@ def insert_info(movie_dict):
     for num in fetchall:
         all_id.append(num[0])
     if int(movie_dict["movie_id"]) not in all_id:
-        query = 'insert into douban(title, movie_id, rate, url, director, \
+        query = 'insert into douban(title, movie_id, rate, url, cover, director, \
             scriptwriter, protagonist, type, region, language, release_time, \
             numbers, run_time, other_title, imdb_link, website, comment_num, summary)\
             values("%s", "%s", "%s", "%s", "%s", "%s", "%s", \
-            "%s", "%s", "%s", "%s", "%s", "%s", "%s", "%s", "%s", "%s", "%s")' \
+            "%s", "%s", "%s", "%s", "%s", "%s", "%s", "%s", "%s", "%s", "%s", "%s")' \
               % (movie_dict["title"], movie_dict["movie_id"],
-                 movie_dict["rate"], movie_dict["url"],
+                 movie_dict["rate"], movie_dict["url"], movie_dict["cover"],
                  movie_dict["director"], movie_dict["scriptwriter"],
                  movie_dict["protagonist"], movie_dict["type"],
                  movie_dict["region"], movie_dict["language"],
@@ -34,7 +34,7 @@ def insert_info(movie_dict):
                  movie_dict["run_time"], movie_dict["other_title"],
                  movie_dict["imdb_link"], movie_dict["website"],
                  movie_dict["comment_num"], movie_dict["summary"])
-
+        query = re.sub(r"\s+", " ", query)
         print("query:", query)
         cur.execute(query)
     cur.close()
@@ -49,11 +49,19 @@ def get_detail_info(movie_url):
         movie_dict["movie_id"] = re.findall(r".*/(\d*)/", url)[0]
         res = requests.get(url)
         soup = BeautifulSoup(res.text, "html.parser")
+        # 获取电影标题
         title = soup.select("h1 span")
         if not title:
             continue
         title = title[0].text
         movie_dict["title"] = title.replace("\"", "\\\"")
+        # 获取电影封面图链接
+        cover_soup = soup.select("#mainpic img")
+        if cover_soup:
+            cover = cover_soup[0].get("src")
+        else:
+            cover = ""
+        movie_dict["cover"] = cover
         # 获取电影评分
         rate_soup = soup.select("#interest_sectl strong")
         if rate_soup:
@@ -108,7 +116,7 @@ def get_detail_info(movie_url):
         movie_dict['comment_num'] = comment_num
         global count
         count += 1
-        if len(movie_dict) < 18:
+        if len(movie_dict) < 19:
             continue
         print(count, len(movie_dict), movie_dict)
         insert_info(movie_dict)
