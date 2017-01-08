@@ -72,21 +72,26 @@ for tag in tags:
     # For test below code
     # break
 fw.close()
-print(movie_list)
+# print(movie_list)
 # key_list = []
 # val_list = []
+count = 0
 movie_dict = {}
 movies_list = []
 for movie in movie_list:
-    # print(movie)
+    count += 1
+    print(count, movie)
     url = movie["url"]
     movie_dict["movie_id"] = movie["id"]
     movie_dict["url"] = url
     movie_dict["rate"] = movie["rate"]
     res = requests.get(url)
     soup = BeautifulSoup(res.text, "html.parser")
-    title = soup.select("h1 span")[0].text
-    movie_dict["title"] = title
+    title = soup.select("h1 span")
+    if not title:
+        continue
+    title = title[0].text
+    movie_dict["title"] = title.replace("\"", "\\\"")
     # print(title)
     # p1 = soup.select("#info .pl")  # [0].text
     # attrs = soup.select("#info .attrs")  # [0].text
@@ -118,19 +123,20 @@ for movie in movie_list:
     for line in info_text.split("\n"):
         new_line = line.split(":")
         if len(new_line) > 1:
-            print(new_line)
-            movie_dict[info_dict[new_line[0]]] = new_line[1]
+            # print(new_line)
+            if new_line[0] in info_dict:
+                movie_dict[info_dict[new_line[0]]] = new_line[1]
     # break
     # movie_dict["info"] = info_text
-    related_text = soup.select(".related-info #link-report")[0].text
-    # print("related text: ", related_text)
-    # summary = related_text.replace(" ", "").replace("\n", "").strip("©豆瓣").replace("\u3000\u3000", "")  # .split("\n")[-1].strip()
     summary = ''
-    tmp_summary = related_text.strip().split("\n")  # .split("\n")[-1].strip()
-    for line in tmp_summary:
-        if len(line) == 0:
-            continue
-        summary += line.strip().strip("©豆瓣")
+    related_text = soup.select(".related-info #link-report")
+    if related_text:
+        related_text = related_text[0].text
+        tmp_summary = related_text.strip().split("\n")
+        for line in tmp_summary:
+            if len(line) == 0:
+                continue
+            summary += line.strip().strip("©豆瓣").replace("\"", "\\\"")
     movie_dict["summary"] = summary
     # print(info_text)
     # print(related_text)
@@ -138,7 +144,7 @@ for movie in movie_list:
     comment_num = soup.select('.mod-hd h2 .pl a')
     comment_num = re.sub(r"\D+", "", comment_num[0].text)
     movie_dict['comment_num'] = comment_num
-    print(movie_dict)
+    # print(movie_dict)
     insert_info(movie_dict)
     # for key in movie_dict:
     #     print(key)
