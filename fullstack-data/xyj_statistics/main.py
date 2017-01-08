@@ -25,8 +25,8 @@ fr.close()
 print(len(characters))
 print(len(stat))
 # 所得结果以jason格式存储
-fw = open("result.json", "w")
-fw.write(json.dumps(stat))
+fw = open("result.json", "w", encoding="utf-8")
+fw.write(json.dumps(stat, ensure_ascii=False, indent=2))
 fw.close()
 # 按value从大到小排序
 stat = sorted(stat.items(), key=lambda d: d[1], reverse=True)
@@ -44,7 +44,7 @@ fw.close()
 # for x in range(0, 20):
 #     print(stat[x][0], stat[x][1])
 
-with open("result.json", "r") as f:
+with open("result.json", "r", encoding="utf-8") as f:
     data_dict = json.loads(f.read())
 
 print(len(data_dict))
