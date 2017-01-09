@@ -142,12 +142,11 @@ def get_movie_tags(url):
 
 url = "https://movie.douban.com/tag/"
 movie_tags = get_movie_tags(url)
-all_movie_id = get_all_movie_id()
-# movie_tags = ["喜剧"]
-# movie_tags.remove("爱情")
+# movie_tags = ["爱情"]
+movie_tags.remove("爱情")
 for tag in movie_tags:
     page = 0
-    # page = 1340
+    all_movie_id = get_all_movie_id()
     while True:
         url = "https://movie.douban.com/tag/%s?start=%s&type=T" \
               % (tag, page)
