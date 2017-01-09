@@ -9,7 +9,7 @@ import pymysql
 count = 0
 
 
-def insert_info(movie_dict):
+def get_all_movie_id():
     conn = pymysql.connect(host="localhost", user="root", password="93560",
                            db="db_int", port=3306, charset="utf8")
     cur = conn.cursor()
@@ -19,34 +19,43 @@ def insert_info(movie_dict):
     all_id = []
     for num in fetchall:
         all_id.append(num[0])
-    if int(movie_dict["movie_id"]) not in all_id:
-        query = 'insert into douban(title, movie_id, rate, url, cover, director, \
-            scriptwriter, protagonist, type, region, language, release_time, \
-            numbers, run_time, other_title, imdb_link, website, comment_num, summary)\
-            values("%s", "%s", "%s", "%s", "%s", "%s", "%s", \
-            "%s", "%s", "%s", "%s", "%s", "%s", "%s", "%s", "%s", "%s", "%s", "%s")' \
-              % (movie_dict["title"], movie_dict["movie_id"],
-                 movie_dict["rate"], movie_dict["url"], movie_dict["cover"],
-                 movie_dict["director"], movie_dict["scriptwriter"],
-                 movie_dict["protagonist"], movie_dict["type"],
-                 movie_dict["region"], movie_dict["language"],
-                 movie_dict["release_time"], movie_dict["numbers"],
-                 movie_dict["run_time"], movie_dict["other_title"],
-                 movie_dict["imdb_link"], movie_dict["website"],
-                 movie_dict["comment_num"], movie_dict["summary"])
-        query = re.sub(r"\s+", " ", query)
-        print("query:", query)
-        cur.execute(query)
+    return all_id
+
+
+def insert_info(movie_dict):
+    conn = pymysql.connect(host="localhost", user="root", password="93560",
+                           db="db_int", port=3306, charset="utf8")
+    cur = conn.cursor()
+    query = 'insert into douban(title, movie_id, rate, url, cover, director, \
+        scriptwriter, protagonist, type, region, language, release_time, \
+        numbers, run_time, other_title, imdb_link, website, comment_num, summary)\
+        values("%s", "%s", "%s", "%s", "%s", "%s", "%s", \
+        "%s", "%s", "%s", "%s", "%s", "%s", "%s", "%s", "%s", "%s", "%s", "%s")' \
+          % (movie_dict["title"], movie_dict["movie_id"],
+             movie_dict["rate"], movie_dict["url"], movie_dict["cover"],
+             movie_dict["director"], movie_dict["scriptwriter"],
+             movie_dict["protagonist"], movie_dict["type"],
+             movie_dict["region"], movie_dict["language"],
+             movie_dict["release_time"], movie_dict["numbers"],
+             movie_dict["run_time"], movie_dict["other_title"],
+             movie_dict["imdb_link"], movie_dict["website"],
+             movie_dict["comment_num"], movie_dict["summary"])
+    query = re.sub(r"\s+", " ", query)
+    print("query:", query)
+    cur.execute(query)
     cur.close()
     conn.close()
 
 
-def get_detail_info(movie_url):
+def get_detail_info(movie_url, all_movie_id):
     # movie_url = ["https://movie.douban.com/subject/26683290/", "https://movie.douban.com/subject/25911694/"]
     movie_dict = {}
     for url in movie_url:
         movie_dict["url"] = url
         movie_dict["movie_id"] = re.findall(r".*/(\d*)/", url)[0]
+        if int(movie_dict["movie_id"]) in all_movie_id:
+            print(movie_dict["movie_id"], "ID exist, skip...")
+            continue
         res = requests.get(url)
         soup = BeautifulSoup(res.text, "html.parser")
         # 获取电影标题
@@ -133,8 +142,12 @@ def get_movie_tags(url):
 
 url = "https://movie.douban.com/tag/"
 movie_tags = get_movie_tags(url)
+all_movie_id = get_all_movie_id()
+# movie_tags = ["喜剧"]
+# movie_tags.remove("爱情")
 for tag in movie_tags:
     page = 0
+    # page = 1340
     while True:
         url = "https://movie.douban.com/tag/%s?start=%s&type=T" \
               % (tag, page)
@@ -147,7 +160,7 @@ for tag in movie_tags:
         movie_url = []
         for li in movie_list:
             movie_url.append(li.get("href"))
-        get_detail_info(movie_url)
+        get_detail_info(movie_url, all_movie_id)
         page += 20
         # For test below code
         # break
