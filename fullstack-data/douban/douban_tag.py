@@ -117,7 +117,7 @@ def get_detail_info(movie_url, all_movie_id):
             for line in tmp_summary:
                 if len(line) == 0:
                     continue
-                summary += line.strip().strip("©豆瓣").replace("\"", "\\\"")
+                summary += line.strip().strip("©豆瓣").replace("\\", "").replace("\"", "\\\"")
         movie_dict["summary"] = summary
         # 获取电影评论数
         comment_num = soup.select('.mod-hd h2 .pl a')
@@ -142,8 +142,10 @@ def get_movie_tags(url):
 
 url = "https://movie.douban.com/tag/"
 movie_tags = get_movie_tags(url)
-# movie_tags = ["爱情"]
+# movie_tags = ["动画"]
 movie_tags.remove("爱情")
+movie_tags.remove("喜剧")
+movie_tags.remove("动画")
 for tag in movie_tags:
     page = 0
     all_movie_id = get_all_movie_id()
