@@ -143,9 +143,12 @@ class FtpClient(object):
         else:
             # 若status为0代表ls命令执行正确
             if not status:
-                print(recv_data.decode())
+                show_data = recv_data.decode()
+                if os.path.isfile(show_data):
+                    show_data = cmd_split[1]
+                print(show_data)
             else:
-                print("Error command...")
+                print("ls: cannot access %s: No such file or directory" % cmd_split[1])
 
     def cmd_put(self, *args):
         cmd_split = args[0].split()
