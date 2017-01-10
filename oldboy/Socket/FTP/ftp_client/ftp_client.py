@@ -125,7 +125,9 @@ class FtpClient(object):
         print("cmd_ls-send ", msg_dic)
         # 接收命令的长度
         server_response = self.client.recv(1024)
-        str_size = int(server_response.decode())
+        recv_dic = json.loads(server_response.decode())
+        str_size = recv_dic["size"]
+        status = recv_dic["status"]
         # 防止粘包
         self.client.send(b"Ready receive")
         recv_size = 0
@@ -139,11 +141,11 @@ class FtpClient(object):
             recv_size += len(data)
             recv_data += data
         else:
-            # TODO:ls目录为空时如何处理
-            if recv_data:
+            # 若status为0代表ls命令执行正确
+            if not status:
                 print(recv_data.decode())
             else:
-                print("Invalid command...")
+                print("Error command...")
 
     def cmd_put(self, *args):
         cmd_split = args[0].split()

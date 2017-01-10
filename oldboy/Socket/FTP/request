@@ -23,12 +23,12 @@
 8.用户认证
 9.切换路径的情况下put和get操作
 10.用户磁盘配额并且在put的时候做检查
+11.overridden权限控制
+12.ls空文件夹时会提示Invalid command
 
 
 需继续完善的点：
-1.overridden权限控制
-2.ls空文件夹时会提示Invalid command
-3.断点续传
-4.logging控制
-5.注释规范
-6.server模块目录整理
+断点续传
+logging控制
+注释规范
+server模块目录整理
