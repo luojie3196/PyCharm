@@ -6,27 +6,37 @@ from bs4 import BeautifulSoup
 import re
 import pymysql
 import time
+from config import HOST, USER, password, db, port, charset
 
 count = 0
 
 
-def get_all_movie_id():
-    conn = pymysql.connect(host="localhost", user="root", password="93560",
-                           db="db_int", port=3306, charset="utf8")
+def mysql_connect():
+    conn = pymysql.connect(host=HOST, user=USER, password=password,
+                           db=db, port=port, charset="utf8")
     cur = conn.cursor()
+    return conn, cur
+
+
+def mysql_close(conn, cur):
+    cur.close()
+    conn.close()
+
+
+def get_all_movie_id():
+    conn, cur = mysql_connect()
     query = 'select movie_id from douban'
     cur.execute(query)
     fetchall = cur.fetchall()
     all_id = []
     for num in fetchall:
         all_id.append(num[0])
+    mysql_close(conn, cur)
     return all_id
 
 
 def insert_info(movie_dict):
-    conn = pymysql.connect(host="localhost", user="root", password="93560",
-                           db="db_int", port=3306, charset="utf8")
-    cur = conn.cursor()
+    conn, cur = mysql_connect()
     query = 'insert into douban(title, movie_id, rate, url, cover, director, \
         scriptwriter, protagonist, type, region, language, release_time, \
         numbers, run_time, other_title, imdb_link, website, comment_num, summary)\
@@ -44,17 +54,17 @@ def insert_info(movie_dict):
     query = re.sub(r"\s+", " ", query)
     print("query:", query)
     cur.execute(query)
-    cur.close()
-    conn.close()
+    mysql_close(conn, cur)
 
 
 def get_detail_info(movie_url, all_movie_id):
-    # movie_url = ["https://movie.douban.com/subject/26683290/", "https://movie.douban.com/subject/25911694/"]
     movie_dict = {}
     for url in movie_url:
         movie_dict["url"] = url
+        # 获取电影ID
         movie_dict["movie_id"] = re.findall(r".*/(\d*)/", url)[0]
         all_movie_id.append(1941401)
+        # 判断电影ID是否已存在数据库中，若存在忽略
         if int(movie_dict["movie_id"]) in all_movie_id:
             print(movie_dict["movie_id"], "ID exist, skip...")
             continue
@@ -101,7 +111,6 @@ def get_detail_info(movie_url, all_movie_id):
             "官方网站": "website",
             "官方小站": "website"
         }
-        # 获取电影官方网站或者官方小站
         movie_dict["website"] = ""
         movie_dict["imdb_link"] = ""
         movie_dict["numbers"] = ""
@@ -153,44 +162,41 @@ def get_movie_tags(url):
         movie_tags.append(tag.text)
     return movie_tags
 
-url = "https://movie.douban.com/tag/"
-# movie_tags = get_movie_tags(url)
-# print(movie_tags)
-# ['悬疑', '青春', '犯罪', '惊悚', '文艺', '搞笑', '纪录片', ]
-movie_tags = ['励志', '恐怖', '战争', '短片', '黑色幽默', '魔幻', '传记', '情色', '感人', '暴力', '动画短片', '家庭', '音乐', '童年', '浪漫', '黑帮', '女性', '同志', '史诗', '烂片', '童话', 'cult']
-# movie_tags = ['纪录片']
-# movie_tags.remove("爱情")
-# movie_tags.remove("喜剧")
-# movie_tags.remove("动画")
-# movie_tags.remove("剧情")
-# movie_tags.remove("科幻")
-# movie_tags.remove("青春")
-for tag in movie_tags:
-    page = 0
-    all_movie_id = get_all_movie_id()
-    while True:
-        url = "https://movie.douban.com/tag/%s?start=%s&type=T" \
-              % (tag, page)
-        print(url)
-        n = 0
+
+def main():
+    url = "https://movie.douban.com/tag/"
+    # 获取电影分类所有tag
+    movie_tags = get_movie_tags(url)
+    print(movie_tags)
+    for tag in movie_tags:
+        page = 0
+        all_movie_id = get_all_movie_id()
         while True:
-            res = requests.get(url)
-            if res.status_code == requests.codes.ok:
+            url = "https://movie.douban.com/tag/%s?start=%s&type=T" \
+                  % (tag, page)
+            print(url)
+            n = 0
+            while True:
+                res = requests.get(url)
+                if res.status_code == requests.codes.ok:
+                    break
+                n += 1
+                print("Try %s connect server %s again..." % (str(n), url))
+                time.sleep(5)
+            soup = BeautifulSoup(res.text, "html.parser")
+            movie_list = soup.select(".item .pl2 a")
+            if not movie_list:
                 break
-            n += 1
-            print("Try %s connect server %s again..." % (str(n), url))
-            time.sleep(5)
-        soup = BeautifulSoup(res.text, "html.parser")
-        movie_list = soup.select(".item .pl2 a")
-        if not movie_list:
-            break
-        movie_url = []
-        for li in movie_list:
-            movie_url.append(li.get("href"))
-        get_detail_info(movie_url, all_movie_id)
-        page += 20
-        # For test below code
-        # break
-    # For test below code
-    # break
+            movie_url = []
+            for li in movie_list:
+                movie_url.append(li.get("href"))
+            get_detail_info(movie_url, all_movie_id)
+            # 每页20条电影信息
+            page += 20
+
+
+if __name__ == '__main__':
+    main()
+
+
 
